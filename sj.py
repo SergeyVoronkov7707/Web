@@ -107,4 +107,4 @@ table_pd = pd.DataFrame(vacancy)
 
 pprint(table_pd[['name', 'salary_min', 'salary_max']])
 
-table_pd.to_csv("hhvacancy.csv")
+table_pd.to_csv("sjvacancy.csv")
