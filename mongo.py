@@ -9,7 +9,7 @@ vacancys = db.vacancys
 
 # mail_link = 'https://www.superjob.ru/'
 # mail_link = 'https://hh.ru/'
-for vc in vacancys.find({'salary_min': {'$gt': 50000}, 'salary_max': {'$gt': 100000}, 'main_url': 'https://hh.ru/'}, {
+for vc in vacancys.find({'salary_min': {'$gt': 50000}, 'salary_max': {'$lt': 150000}, 'main_url': 'https://hh.ru/'}, {
     'salary_min': 1,
     'salary_max': 1,
     'currency': 1,
