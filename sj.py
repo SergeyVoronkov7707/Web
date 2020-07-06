@@ -2,8 +2,15 @@ from bs4 import BeautifulSoup as bs
 import requests
 from pprint import pprint
 import pandas as pd
+from pymongo import MongoClient
 
-name = input('введите должность: ')
+client = MongoClient('localhost', 27017)
+db = client['vacancys_db']
+
+vacancys = db.vacancys
+
+# name = input('введите должность: ')
+name = 'машинист'
 
 lnum = 0
 
@@ -52,40 +59,74 @@ while True:
                 res_min = res
         except (ValueError, AttributeError):
             res = 'зарплата не указана'
-        if res == 'зарплата не указана':
-            vacancy_main_url = mail_link
-            vacancy_data['name'] = vacancy_name
-            vacancy_data['url'] = vacancy_url
-            vacancy_data['salary_max'] = None
-            vacancy_data['salary_min'] = None
-            vacancy_data['main_url'] = vacancy_main_url
-        elif len(res) == 1 and vacancy_salary.split()[0].lower() == 'до':
+        try:
+            if res == 'зарплата не указана':
+                vacancy_main_url = mail_link
 
-            vacancy_main_url = mail_link
-            vacancy_data['name'] = vacancy_name
-            vacancy_data['salary_max'] = res[0]
-            vacancy_data['salary_min'] = None
-            vacancy_data['currency'] = curr[-1]
-            vacancy_data['url'] = vacancy_url
-            vacancy_data['main_url'] = vacancy_main_url
-        elif len(res) == 1 and vacancy_salary.split()[0].lower() == 'от':
+                vacancy_data['name'] = vacancy_name
+                vacancy_data['url'] = vacancy_url
+                vacancy_data['salary_max'] = None
+                vacancy_data['salary_min'] = None
+                vacancy_data['main_url'] = vacancy_main_url
+                vacancy_data['vacancyId'] = vacancy_data['url'][30:38]
+                vacancys.insert_one({'name': vacancy_data['name'],
+                                     '_id': vacancy_data['vacancyId'],
+                                     'salary_min': vacancy_data['salary_min'],
+                                     'salary_max': vacancy_data['salary_max'],
+                                     'main_url': vacancy_data['main_url'],
+                                     'url': vacancy_data['main_url']})
+            elif len(res) == 1 and vacancy_salary.split()[0].lower() == 'до':
 
-            vacancy_main_url = mail_link
-            vacancy_data['name'] = vacancy_name
-            vacancy_data['salary_max'] = None
-            vacancy_data['salary_min'] = res[0]
-            vacancy_data['currency'] = curr[-1]
-            vacancy_data['url'] = vacancy_url
-            vacancy_data['main_url'] = vacancy_main_url
-        else:
+                vacancy_main_url = mail_link
+                vacancy_data['name'] = vacancy_name
+                vacancy_data['salary_max'] = res[0]
+                vacancy_data['salary_min'] = None
+                vacancy_data['currency'] = curr[-1]
+                vacancy_data['url'] = vacancy_url
+                vacancy_data['main_url'] = vacancy_main_url
+                vacancy_data['vacancyId'] = vacancy_url[30:38]
+                vacancys.insert_one({'name': vacancy_data['name'],
+                                     '_id': vacancy_data['vacancyId'],
+                                     'salary_min': vacancy_data['salary_min'],
+                                     'salary_max': vacancy_data['salary_max'],
+                                     'main_url': vacancy_data['main_url'],
+                                     'url': vacancy_data['main_url']})
+            elif len(res) == 1 and vacancy_salary.split()[0].lower() == 'от':
 
-            vacancy_main_url = mail_link
-            vacancy_data['name'] = vacancy_name
-            vacancy_data['salary_max'] = res_max
-            vacancy_data['salary_min'] = res_min
-            vacancy_data['currency'] = curr[-1]
-            vacancy_data['url'] = vacancy_url
-            vacancy_data['main_url'] = vacancy_main_url
+                vacancy_main_url = mail_link
+                vacancy_data['name'] = vacancy_name
+                vacancy_data['salary_max'] = None
+                vacancy_data['salary_min'] = res[0]
+                vacancy_data['currency'] = curr[-1]
+                vacancy_data['url'] = vacancy_url
+                vacancy_data['vacancyId'] = vacancy_url[30:38]
+                vacancy_data['main_url'] = vacancy_main_url
+                vacancys.insert_one({'name': vacancy_data['name'],
+                                     '_id': vacancy_data['vacancyId'],
+                                     'salary_min': vacancy_data['salary_min'],
+                                     'salary_max': vacancy_data['salary_max'],
+                                     'currency': vacancy_data['currency'],
+                                     'main_url': vacancy_data['main_url'],
+                                     'url': vacancy_data['main_url']})
+            else:
+
+                vacancy_main_url = mail_link
+                vacancy_data['name'] = vacancy_name
+                vacancy_data['salary_max'] = res_max
+                vacancy_data['salary_min'] = res_min
+                vacancy_data['currency'] = curr[-1]
+                vacancy_data['url'] = vacancy_url
+                vacancy_data['vacancyId'] = vacancy_url[30:38]
+                vacancy_data['main_url'] = vacancy_main_url
+                vacancys.insert_one({'name': vacancy_data['name'],
+                                     '_id': vacancy_data['vacancyId'],
+                                     'salary_min': vacancy_data['salary_min'],
+                                     'salary_max': vacancy_data['salary_max'],
+                                     'currency': vacancy_data['currency'],
+                                     'main_url': vacancy_data['main_url'],
+                                     'url': vacancy_data['main_url']})
+        except:
+            continue
         vacancy.append(vacancy_data)
         res = []
         res_max = []
@@ -103,8 +144,14 @@ while True:
         print(f'Всего найдено {lnum} записей c superjob.ru')
         break
 
-table_pd = pd.DataFrame(vacancy)
 
-pprint(table_pd[['name', 'salary_min', 'salary_max']])
 
-table_pd.to_csv("sjvacancy.csv")
+# vacancys.insert_many(vacancy)
+# for vc in vacancys.find({}):
+#     pprint(vc)
+
+# table_pd = pd.DataFrame(vacancy)
+
+# pprint(table_pd[['name', 'salary_min', 'salary_max']])
+
+# table_pd.to_csv("hhvacancy.csv")
