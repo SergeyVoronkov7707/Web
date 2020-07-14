@@ -13,70 +13,85 @@ from pprint import pprint
 class JobparserPipeline:
 
     def __init__(self):
-        self.client = MongoClient('localhost',27017)
+        self.client = MongoClient('localhost', 27017)
         self.mongo_base = self.client.vacansy123
 
-    def process_sj(self,item, spider):
-        pass
     def process_item(self, item, spider):
-        job_parse = {}
-        collection = self.mongo_base[spider.name]
-
+        salary = item['salary']
         if spider.name == 'hhru':
-            salary = item['salary']
-            res = []
-            sal_max = []
-            sal_min = []
-            currency = []
-            if str(salary).find('руб'):
-                item['currency'] = 'руб'
-            elif str(salary).find('EUR'):
-                item['currency'] = 'EUR'
-            elif str(salary).find('USD'):
-                item['currency'] = 'USD'
-            else:
-                pass
+            item['salary_min'], item['salary_max'], item['currency'] = self.hh_process_salary(salary)
+        elif spider.name == 'sjru':
+            item['salary_min'], item['salary_max'], item['currency'] = self.sj_process_salary(salary)
+        salary_min = item['salary_min']
+        salary_max = item['salary_max']
+        salary_cur = item['currency']
+        item['line'] = spider.name
 
-            for i in salary:
-                try:
-                    int(i[0])
-                    t = i.split()
-                    t = t[0] + t[1]
-                    res.append(int(t))
-                except:
-                    pass
-            try:
-                sal_min.append(res[0])
-                sal_max.append(res[1])
-                job_parse['name'] = item['name']
-                if len(item['salary']) < 5 and item['salary'][0] == 'от':
-                    item['salary_min'] = sal_min
-                if len(item['salary']) < 5 and item['salary'][0] == 'до':
-                    item['salary_max'] = sal_min
-                item['salary_min'] = sal_min
-                item['salary_max'] = sal_max
-                item['currency'] = currency
-                item['line'] = spider.name
-
-
-                # del item['salary']
-
-
-            except:
-                pass
-            del item['salary']
-            pprint(item)
-            collection.insert_one(item)
-            return item
-        if spider.name == 'sjru':
-            item['line'] = spider.name
-            collection.insert_one(item)
-            pprint(item)
-
-          
-
+        del item['salary']
+        collection = self.mongo_base[spider.name]
+        collection.insert_one(item)
+        pprint(item)
+        return item
+    
     def __del__(self):
         self.client.close()
 
+    def hh_process_salary(self, salary):
+        res = []
+        try:
+            if len(salary) == 7:
+                for item in salary:
+                    if item[0].isdigit():
+                        sal = int(str(item).replace('\xa0', ''))
+                        res.append(sal)
+                sal_min = res[0]
+                sal_max = res[1]
+                currency = salary[-2]
+                return sal_min, sal_max, currency
+            if len(salary) == 5:
+                for item in salary:
+                    if item[0].isdigit():
+                        sal = int(str(item).replace('\xa0', ''))
+                        res.append(sal)
+                if salary[0] == 'от':
+                    sal_min = res
+                    currency = salary[-2]
+                    return sal_min, None, currency
+                if salary[0] == 'до':
+                    sal_max = res
+                    currency = salary[-2]
+                    return None, sal_max, currency
+            else:
+                return None, None, None
 
+        except:
+            pass
 
+    
+
+    def sj_process_salary(self, salary):
+        res = []
+        try:
+            if salary[0] == 'от':
+                sal_min = int(salary[2][:7].replace('\xa0', ''))
+                currency = salary[2][7:]
+                return sal_min, None, currency
+            if salary[0] == 'до':
+                sal_max = int(salary[2][:7].replace('\xa0', ''))
+                currency = salary[2][7:]
+                return None, sal_max, currency
+            if len(salary) == 1:
+                currency = 'по договоренности'
+                return None, None, currency
+            if len(salary) == 4:
+                for i in salary:
+                    fd = i.replace('\xa0', '')
+                    res.append(fd)
+                sal_min = res[0]
+                sal_max = res[1]
+                currency = salary[-1]
+                return sal_min, sal_max, currency
+            else:
+                return None, None, None
+        except:
+            pass
