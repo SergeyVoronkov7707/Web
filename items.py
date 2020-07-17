@@ -13,11 +13,13 @@ def val_price(value):
     else:
         return value
 
+
 def line_photo(value):
     if value[:2] == '//':
         return f'http:{value}'
     else:
         return value
+
 
 class LeruaparserItem(scrapy.Item):
     # define the fields for your item here like:
@@ -28,7 +30,7 @@ class LeruaparserItem(scrapy.Item):
     num = scrapy.Field(output_processor=TakeFirst())
     name_adress = scrapy.Field()
     url = scrapy.Field(output_processor=TakeFirst())
-    photos = scrapy.Field(output_processor=MapCompose(line_photo))
-    # char = scrapy.Field()
-    # vacansy_link = scrapy.Field()
 
+    photos = scrapy.Field(input_processor=MapCompose(line_photo))
+    photo_cat = scrapy.Field()
+    specific = scrapy.Field()
