@@ -29,10 +29,10 @@ class LeruaSpecifications:
         return item
 
 
-class DataBasePipeline:
+class LeruaparserPipeline:
     def __init__(self):
         self.client = MongoClient('localhost', 27017)
-        self.mongo_base = self.client.avito_photos
+        self.mongo_base = self.client.lerua_photos
 
     def process_item(self, item, spider):
         collection = self.mongo_base[spider.name]
@@ -41,19 +41,6 @@ class DataBasePipeline:
 
     def __del__(self):
         self.client.close()
-
-
-class LeruaparserPipeline:
-    def process_item(self, item, spider):
-        item['name_adress'] = spider.name
-
-        pprint(item)
-        return item
-
-    def item_completed(self, results, item, info):
-        if results:
-            item['photos'] = [itm[1] for itm in results if itm[0]]
-        return item
 
 
 class LeruaPhotosPipeline(ImagesPipeline):
