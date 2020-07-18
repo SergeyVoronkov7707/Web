@@ -71,6 +71,10 @@ COOKIES_ENABLED = True
 ITEM_PIPELINES = {
    'leruaparser.pipelines.LeruaparserPipeline': 300,
    'leruaparser.pipelines.LeruaPhotosPipeline': 200,
+   'leruaparser.pipelines.LeruaSpecifications': 100,
+   'scrapy.pipelines.images.ImagesPipeline': 1
+
+
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
