@@ -6,92 +6,59 @@
 
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
-from pymongo import MongoClient
 from pprint import pprint
+from scrapy.pipelines.images import ImagesPipeline
+import scrapy
+from pymongo import MongoClient
+import os
+from urllib.parse import urlparse
 
 
-class JobparserPipeline:
+class LeruaSpecifications:
+    def process_item(self, item, spider):
+        n = 7
+        w_desc = {}
+        item['specific'] = [line.strip() for line in item['specific']]
+        while True:
+            try:
+                w_desc[item['specific'][n]] = item['specific'][n + 2]
+                n = n + 6
+            except:
+                break
+        item['specific'] = w_desc
+        return item
 
+
+class LeruaparserPipeline:
     def __init__(self):
         self.client = MongoClient('localhost', 27017)
-        self.mongo_base = self.client.vacansy123
+        self.mongo_base = self.client.lerua_photos
 
     def process_item(self, item, spider):
-        salary = item['salary']
-        if spider.name == 'hhru':
-            item['salary_min'], item['salary_max'], item['currency'] = self.hh_process_salary(salary)
-        elif spider.name == 'sjru':
-            item['salary_min'], item['salary_max'], item['currency'] = self.sj_process_salary(salary)
-        salary_min = item['salary_min']
-        salary_max = item['salary_max']
-        salary_cur = item['currency']
-        item['line'] = spider.name
-
-        del item['salary']
         collection = self.mongo_base[spider.name]
         collection.insert_one(item)
-        pprint(item)
         return item
-    
+
     def __del__(self):
         self.client.close()
 
-    def hh_process_salary(self, salary):
-        res = []
-        try:
-            if len(salary) == 7:
-                for item in salary:
-                    if item[0].isdigit():
-                        sal = int(str(item).replace('\xa0', ''))
-                        res.append(sal)
-                sal_min = res[0]
-                sal_max = res[1]
-                currency = salary[-2]
-                return sal_min, sal_max, currency
-            if len(salary) == 5:
-                for item in salary:
-                    if item[0].isdigit():
-                        sal = int(str(item).replace('\xa0', ''))
-                        res.append(sal)
-                if salary[0] == 'от':
-                    sal_min = res
-                    currency = salary[-2]
-                    return sal_min, None, currency
-                if salary[0] == 'до':
-                    sal_max = res
-                    currency = salary[-2]
-                    return None, sal_max, currency
-            else:
-                return None, None, None
 
-        except:
-            pass
+class LeruaPhotosPipeline(ImagesPipeline):
+    def get_media_requests(self, item, info):
+        if item['photos']:
+            for img in item['photos']:
+                try:
+                    yield scrapy.Request(img, meta=item)
+                except Exception as e:
+                    print(e)
 
-    
+    def file_path(self, request, response=None, info=None):
+        media_dir = os.path.basename(request.meta['name'])
+        media_name = os.path.basename(urlparse(request.url).path)
+        dir = '/full/%s/%s' % (media_dir, media_name)
+        return dir
 
-    def sj_process_salary(self, salary):
-        res = []
-        try:
-            if salary[0] == 'от':
-                sal_min = int(salary[2][:7].replace('\xa0', ''))
-                currency = salary[2][7:]
-                return sal_min, None, currency
-            if salary[0] == 'до':
-                sal_max = int(salary[2][:7].replace('\xa0', ''))
-                currency = salary[2][7:]
-                return None, sal_max, currency
-            if len(salary) == 1:
-                currency = 'по договоренности'
-                return None, None, currency
-            if len(salary) == 4:
-                for i in salary:
-                    fd = i.replace('\xa0', '')
-                    res.append(fd)
-                sal_min = res[0]
-                sal_max = res[1]
-                currency = salary[-1]
-                return sal_min, sal_max, currency
-            else:
-                return None, None, None
-        except:
-            pass
+    def item_completed(self, results, item, info):
+        if results:
+            item['photos'] = [itm[1] for itm in results if itm[0]]
+        return item
